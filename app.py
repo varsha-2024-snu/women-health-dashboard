@@ -3,12 +3,19 @@ import streamlit as st
 import joblib
 import pandas as pd
 from datetime import datetime, timedelta
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Load models
 maternal_health_model = joblib.load('maternal_health_model.pkl')
 model_regularity = joblib.load('model_regularity (1).pkl')
 model_ovulation = joblib.load('model_ovulation (1).pkl')
 mental_health_model = joblib.load('women_mental_health_model.pkl')
+
+# Load datasets
+maternal_health_data = pd.read_csv('Maternal Health Risk Data Set.csv')
+menstrual_cycle_data = pd.read_csv('Menstural_cyclelength.csv')
+mental_health_survey_data = pd.read_csv('survey.csv')
 
 # Define prediction functions for maternal health
 def predict_risk(age, systolic_bp, diastolic_bp, bs, body_temp, heart_rate):
@@ -40,44 +47,50 @@ def calculate_next_cycle_date(start_date, cycle_length):
 st.markdown(
     """
     <style>
-    /* Main background color */
-    .stApp {
-        background-color: #FFB4A2;
-        color: #333333;
+    /* Sidebar background */
+    [data-testid="stSidebar"] {
+        background-color: #ec628b !important;
+        padding-top: 20px !important;
     }
-    /* Sidebar background color */
-    .css-1d391kg {
-        background-color: #B7B1F2 !important;
+
+    /* Sidebar text */
+    [data-testid="stSidebar"] * {
+        color: white !important;
+        font-size: 18px !important;
+        font-weight: bold !important;
+        font-family: 'Arial', sans-serif !important;
     }
-    /* Button styling */
-    .stButton>button {
-        background-color: #a8e6cf;
-        color: #333333;
+
+    /* Customize radio button (navigation menu) */
+    div[data-testid="stSidebar"] div[role="radiogroup"] label {
+        display: flex;
+        align-items: center;
+        background-color: rgba(255, 255, 255, 0.2);
         border-radius: 10px;
-        padding: 10px 20px;
-        font-size: 16px;
-    }
-    .stButton>button:hover {
-        background-color: #dcedc1;
-    }
-    /* Input field styling */
-    .stNumberInput>div>div>input, .stSelectbox>div>div>select, .stMultiselect>div>div>div {
-        background-color: #ffd3b6;
-        color: #333333;
-    }
-    /* Success and warning message styling */
-    .stSuccess {
-        background-color: #dcedc1;
-        color: #333333;
         padding: 10px;
-        border-radius: 10px;
+        margin: 5px 0;
+        transition: background-color 0.3s ease;
     }
-    .stWarning {
-        background-color: #ffaaa5;
-        color: #333333;
-        padding: 10px;
-        border-radius: 10px;
+
+    /* Change color of selected radio button */
+    div[data-testid="stSidebar"] div[role="radiogroup"] label:hover {
+        background-color: rgba(255, 255, 255, 0.4);
     }
+
+    /* Highlight the selected item */
+    div[data-testid="stSidebar"] div[aria-checked="true"] {
+        background-color: white !important;
+        color: #ec628b !important;
+        font-weight: bold !important;
+        border-radius: 10px !important;
+        padding: 10px !important;
+    }
+
+    /* Remove default radio button circle */
+    div[data-testid="stSidebar"] div[role="radiogroup"] label span {
+        display: none;
+    }
+
     </style>
     """,
     unsafe_allow_html=True
@@ -85,7 +98,7 @@ st.markdown(
 
 # Set up the sidebar for navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Home", "Maternal Health", "Menstrual Cycle", "Mental Well-being"])
+page = st.sidebar.radio("Go to", ["Home", "Maternal Health", "Menstrual Cycle", "Mental Well-being", "BMI Calculator", "Hydration Tracker"])
 
 # Home Page
 if page == "Home":
@@ -93,7 +106,78 @@ if page == "Home":
     st.write("Welcome to the Women's Health Dashboard! Use the sidebar to navigate to different sections.")
     
     # Add an image
-    st.image("image1.jpg", caption="Empowering Women Through Health Awareness")
+    st.image("image1.jpg", caption="Empowering Women Through Health Awareness", use_container_width=True)
+
+    # Data Analytics Section
+    st.header("📊 Data Analytics for Women's Health Awareness")
+
+    # Maternal Health Analytics
+    st.subheader("1. Maternal Health Risk Analysis")
+    st.write("How each factor contributes to high-risk maternal health:")
+
+    # Filter high-risk cases
+    high_risk_data = maternal_health_data[maternal_health_data['RiskLevel'] == 'high risk']
+
+    # Plotting
+    fig1, ax1 = plt.subplots(figsize=(10, 6))
+    sns.boxplot(data=high_risk_data[['Age', 'SystolicBP', 'DiastolicBP', 'BS', 'BodyTemp', 'HeartRate']], ax=ax1, palette='viridis')
+    ax1.set_title("Distribution of Factors Contributing to High-Risk Maternal Health")
+    ax1.set_ylabel("Value")
+    st.pyplot(fig1)
+    st.write("This graph shows the distribution of factors like age, blood pressure, blood sugar, body temperature, and heart rate for high-risk maternal health cases.")
+
+    # Menstrual Health Analytics
+    st.subheader("2. Menstrual Health Analysis")
+    st.write("Distribution of Menstrual Cycle Lengths:")
+
+    # Check if 'cycle_length' column exists
+    if 'cycle_length' in menstrual_cycle_data.columns:
+        # Histogram for Cycle Lengths
+        fig2, ax2 = plt.subplots(figsize=(10, 6))
+        sns.histplot(menstrual_cycle_data['cycle_length'], bins=20, kde=True, color='purple', ax=ax2)
+        ax2.set_title("Distribution of Menstrual Cycle Lengths")
+        ax2.set_xlabel("Cycle Length (Days)")
+        ax2.set_ylabel("Frequency")
+        st.pyplot(fig2)
+        st.write("This graph shows the distribution of menstrual cycle lengths among women.")
+    else:
+        st.warning("The dataset does not contain the 'cycle_length' column. Displaying available columns:")
+        st.write(menstrual_cycle_data.columns)
+
+        # If 'cycle_length' is not available, display any other relevant graph
+        if len(menstrual_cycle_data.columns) > 0:
+            # Plot the first numeric column as an example
+            numeric_columns = menstrual_cycle_data.select_dtypes(include=['int', 'float']).columns
+            if len(numeric_columns) > 0:
+                column_to_plot = numeric_columns[0]
+                fig2, ax2 = plt.subplots(figsize=(10, 6))
+                sns.histplot(menstrual_cycle_data[column_to_plot], bins=20, kde=True, color='purple', ax=ax2)
+                ax2.set_title(f"Distribution of {column_to_plot}")
+                ax2.set_xlabel(column_to_plot)
+                ax2.set_ylabel("Frequency")
+                st.pyplot(fig2)
+                st.write(f"This graph shows the distribution of {column_to_plot}.")
+            else:
+                st.warning("No numeric columns found in the dataset for visualization.")
+        else:
+            st.warning("The dataset is empty or contains no columns.")
+
+    # Mental Health Analytics
+    st.subheader("3. Mental Health Analysis")
+    st.write("Number of women affected by mental health diseases:")
+
+    # Filter data for women
+    women_mental_health_data = mental_health_survey_data[mental_health_survey_data['Gender'] == 'Female']
+    if 'treatment' in women_mental_health_data.columns:
+        fig3, ax3 = plt.subplots()
+        sns.countplot(x='treatment', data=women_mental_health_data, palette='coolwarm', ax=ax3)
+        ax3.set_title("Women Seeking Mental Health Treatment")
+        ax3.set_xlabel("Sought Treatment")
+        ax3.set_ylabel("Count")
+        st.pyplot(fig3)
+        st.write("This graph shows the number of women who sought mental health treatment versus those who did not.")
+    else:
+        st.warning("The 'treatment' column is not present in the dataset.")
 
 # Maternal Health Page
 elif page == "Maternal Health":
@@ -105,7 +189,7 @@ elif page == "Maternal Health":
     systolic_bp = st.number_input("Systolic Blood Pressure", min_value=50, max_value=200, value=120)
     diastolic_bp = st.number_input("Diastolic Blood Pressure", min_value=30, max_value=150, value=80)
     bs = st.number_input("Blood Sugar Level", min_value=2.0, max_value=20.0, value=5.0)
-    body_temp = st.number_input("Body Temperature", min_value=35.0, max_value=42.0, value=37.0)
+    body_temp = st.number_input("Body Temperature", min_value=80.0, max_value=120.0, value=98.0)
     heart_rate = st.number_input("Heart Rate", min_value=50, max_value=150, value=80)
 
     # Predict button
@@ -251,3 +335,127 @@ elif page == "Mental Well-being":
             st.success("Positive Affirmation:")
             st.write("- You are doing great! Keep up the good work and continue taking care of your mental health.")
             st.write("- Remember to practice self-care and stay connected with loved ones.")
+
+# BMI Calculator Page
+# BMI Calculator Page
+elif page == "BMI Calculator":
+    st.title("📊 BMI Calculator")
+    st.write("Calculate your Body Mass Index (BMI) and get personalized recommendations.")
+
+    # Input fields for height and weight
+    height_unit = st.radio("Select height unit:", ["Centimeters (cm)", "Meters (m)"])
+    if height_unit == "Centimeters (cm)":
+        height = st.number_input("Enter your height (in cm):", min_value=50, max_value=250, value=160)
+        height_m = height / 100  # Convert cm to meters
+    else:
+        height_m = st.number_input("Enter your height (in meters):", min_value=1.0, max_value=2.5, value=1.6)
+
+    weight_unit = st.radio("Select weight unit:", ["Kilograms (kg)", "Pounds (lbs)"])
+    if weight_unit == "Kilograms (kg)":
+        weight = st.number_input("Enter your weight (in kg):", min_value=30, max_value=300, value=60)
+    else:
+        weight_lbs = st.number_input("Enter your weight (in lbs):", min_value=66, max_value=660, value=132)
+        weight = weight_lbs * 0.453592  # Convert lbs to kg
+
+    # Calculate BMI
+    if st.button("Calculate BMI"):
+        if height_m <= 0 or weight <= 0:
+            st.error("Please enter valid height and weight values.")
+        else:
+            bmi = weight / (height_m ** 2)
+            st.success(f"Your BMI is: **{bmi:.2f}**")
+
+            # BMI Categories and Recommendations
+            if bmi < 18.5:
+                st.warning("**Category:** Underweight")
+                st.write("**Recommendations:**")
+                st.write("- Focus on gaining weight through a balanced diet rich in proteins, healthy fats, and carbohydrates.")
+                st.write("- Include strength training exercises to build muscle mass.")
+                st.write("- Consult a nutritionist for a personalized diet plan.")
+            elif 18.5 <= bmi < 24.9:
+                st.success("**Category:** Normal Weight")
+                st.write("**Recommendations:**")
+                st.write("- Maintain a healthy lifestyle with regular exercise and a balanced diet.")
+                st.write("- Stay hydrated and avoid excessive junk food.")
+                st.write("- Regular health check-ups are recommended.")
+            elif 25 <= bmi < 29.9:
+                st.warning("**Category:** Overweight")
+                st.write("**Recommendations:**")
+                st.write("- Focus on losing weight through a calorie deficit diet and regular exercise.")
+                st.write("- Include more fruits, vegetables, and whole grains in your diet.")
+                st.write("- Avoid sugary drinks and processed foods.")
+            else:
+                st.error("**Category:** Obese")
+                st.write("**Recommendations:**")
+                st.write("- Seek professional help from a doctor or nutritionist for weight management.")
+                st.write("- Incorporate daily physical activity like walking, jogging, or yoga.")
+                st.write("- Avoid high-calorie foods and focus on portion control.")
+
+    # Additional Tips
+    st.markdown("### 🍎 Healthy Eating Tips")
+    st.write("- Eat a variety of fruits and vegetables daily.")
+    st.write("- Choose whole grains over refined grains.")
+    st.write("- Limit your intake of added sugars and saturated fats.")
+    st.write("- Stay hydrated by drinking plenty of water.")
+
+    st.markdown("### 🏋️‍♀️ Exercise Tips")
+    st.write("- Aim for at least 30 minutes of moderate exercise daily.")
+    st.write("- Include strength training exercises twice a week.")
+    st.write("- Try activities like yoga, swimming, or cycling for variety.")
+
+    # Hydration Tracker Page
+elif page == "Hydration Tracker":
+    st.title("💧 Hydration Tracker")
+    st.write("Track your daily water intake and stay hydrated!")
+
+    # Daily Water Intake Recommendation
+    st.markdown("### 🚰 Daily Water Intake Recommendation")
+    weight_kg = st.number_input("Enter your weight (in kg):", min_value=30, max_value=300, value=60)
+    activity_level = st.selectbox("Select your activity level:", ["Sedentary", "Moderately Active", "Very Active"])
+    
+    # Calculate recommended water intake
+    if activity_level == "Sedentary":
+        water_intake_ml = weight_kg * 30  # 30 ml per kg of body weight
+    elif activity_level == "Moderately Active":
+        water_intake_ml = weight_kg * 35  # 35 ml per kg of body weight
+    else:
+        water_intake_ml = weight_kg * 40  # 40 ml per kg of body weight
+
+    st.success(f"Your recommended daily water intake is **{water_intake_ml:.0f} ml**.")
+
+    # Water Intake Tracker
+    st.markdown("### 📊 Track Your Water Intake")
+    st.write("Log how much water you've consumed today:")
+
+    # Input for water intake
+    water_consumed_ml = st.number_input("Enter the amount of water consumed (in ml):", min_value=0, max_value=5000, value=0)
+
+    # Calculate remaining water intake
+    remaining_water_ml = max(0, water_intake_ml - water_consumed_ml)
+    st.write(f"Remaining water to drink today: **{remaining_water_ml:.0f} ml**.")
+
+    # Progress Bar
+    progress = min(1.0, water_consumed_ml / water_intake_ml)
+    st.progress(progress)
+    st.write(f"You've consumed **{progress * 100:.1f}%** of your daily goal.")
+
+    # Hydration Tips
+    st.markdown("### 💡 Hydration Tips")
+    st.write("- Start your day with a glass of water.")
+    st.write("- Carry a reusable water bottle with you.")
+    st.write("- Set reminders to drink water throughout the day.")
+    st.write("- Eat water-rich foods like cucumbers, watermelon, and oranges.")
+    st.write("- Avoid sugary drinks and opt for water instead.")
+
+    # Reminder Feature
+    st.markdown("### ⏰ Set a Hydration Reminder")
+    reminder_frequency = st.selectbox("How often would you like to be reminded to drink water?", ["Every 30 minutes", "Every 1 hour", "Every 2 hours"])
+    
+    if st.button("Set Reminder"):
+        if reminder_frequency == "Every 30 minutes":
+            st.write("🔔 Reminder set: Drink water every 30 minutes!")
+        elif reminder_frequency == "Every 1 hour":
+            st.write("🔔 Reminder set: Drink water every 1 hour!")
+        else:
+            st.write("🔔 Reminder set: Drink water every 2 hours!")
+        st.write("Stay consistent and keep hydrating! 💧")
